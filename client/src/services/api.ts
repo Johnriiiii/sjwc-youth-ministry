@@ -9,7 +9,9 @@ import type {
   YouthFormInput,
 } from '../types'
 
-const API_BASE = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:4000/api' : '')
+const API_BASE =
+  import.meta.env.VITE_API_URL ??
+  (import.meta.env.DEV ? 'http://localhost:4000/api' : 'https://sjwc-youth-ministry2.onrender.com/api')
 const TOKEN_KEY = 'sjwc-token'
 
 type RequestOptions = {
