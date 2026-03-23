@@ -21,10 +21,6 @@ type RequestOptions = {
 }
 
 const request = async <T>(path: string, options: RequestOptions = {}) => {
-  if (!API_BASE) {
-    throw new Error('Missing API URL. Set VITE_API_URL in Vercel to your backend URL ending with /api.')
-  }
-
   let response: Response
   try {
     response = await fetch(`${API_BASE}${path}`, {
