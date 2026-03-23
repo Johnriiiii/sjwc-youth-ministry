@@ -9,7 +9,7 @@ import type {
   YouthFormInput,
 } from '../types'
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api'
+const API_BASE = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:4000/api' : '')
 const TOKEN_KEY = 'sjwc-token'
 
 type RequestOptions = {
@@ -19,6 +19,10 @@ type RequestOptions = {
 }
 
 const request = async <T>(path: string, options: RequestOptions = {}) => {
+  if (!API_BASE) {
+    throw new Error('Missing API URL. Set VITE_API_URL in Vercel to your backend URL ending with /api.')
+  }
+
   let response: Response
   try {
     response = await fetch(`${API_BASE}${path}`, {
