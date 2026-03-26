@@ -1,24 +1,16 @@
-import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 import { env } from '../config/env.js';
-const smtpConfigured = Boolean(env.smtpHost && env.smtpUser && env.smtpPass);
-export const isSmtpConfigured = smtpConfigured;
-const transporter = smtpConfigured
-    ? nodemailer.createTransport({
-        host: env.smtpHost,
-        port: env.smtpPort,
-        secure: env.smtpPort === 465,
-        auth: {
-            user: env.smtpUser,
-            pass: env.smtpPass,
-        },
-    })
-    : null;
+const sendgridConfigured = Boolean(env.sendgridApiKey);
+export const isSmtpConfigured = sendgridConfigured;
+if (sendgridConfigured) {
+    sgMail.setApiKey(env.sendgridApiKey);
+}
 export const sendActivationEmail = async (input) => {
-    if (!transporter) {
-        throw new Error('SMTP is not configured on the server. Please set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and SMTP_FROM.');
+    if (!sendgridConfigured) {
+        throw new Error('SendGrid is not configured on the server. Please set SENDGRID_API_KEY and EMAIL_FROM.');
     }
-    await transporter.sendMail({
-        from: env.smtpFrom,
+    await sgMail.send({
+        from: env.emailFrom,
         to: input.to,
         subject: 'Activate your SJWC Youth Ministry account',
         html: `

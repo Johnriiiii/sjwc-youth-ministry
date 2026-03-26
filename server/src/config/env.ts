@@ -20,9 +20,6 @@ export const env = {
     process.env.BASE_URL ??
     process.env.CLIENT_ORIGIN ??
     'http://localhost:5173',
-  smtpHost: process.env.SMTP_HOST,
-  smtpPort: Number(process.env.SMTP_PORT ?? 587),
-  smtpUser: process.env.SMTP_USER ?? process.env.SMTP_LOGIN,
-  smtpPass: process.env.SMTP_PASS ?? process.env.SMTP_KEY,
-  smtpFrom: process.env.SMTP_FROM ?? 'SJWC Youth Ministry <no-reply@sjwc-youth.local>',
+  sendgridApiKey: process.env.SENDGRID_API_KEY ?? process.env.SENDGRID_KEY,
+  emailFrom: process.env.EMAIL_FROM ?? process.env.SMTP_FROM ?? 'SJWC Youth Ministry <no-reply@sjwc-youth.local>',
 }
