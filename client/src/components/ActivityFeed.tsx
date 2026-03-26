@@ -7,6 +7,20 @@ type ActivityFeedProps = {
 }
 
 const todayKey = new Date().toISOString().slice(0, 10)
+const weekLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+const toDateKey = (date: Date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const formatMonthYear = (date: Date) =>
+  date.toLocaleDateString('en-PH', {
+    month: 'long',
+    year: 'numeric',
+  })
 
 const formatDate = (value: string) =>
   new Date(value).toLocaleDateString('en-PH', {
@@ -18,6 +32,11 @@ const formatDate = (value: string) =>
 export function ActivityFeed({ activities, loading = false }: ActivityFeedProps) {
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'month'>('upcoming')
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const now = new Date()
+    return new Date(now.getFullYear(), now.getMonth(), 1)
+  })
+  const [selectedDate, setSelectedDate] = useState(todayKey)
 
   const filtered = useMemo(() => {
     const now = new Date()
@@ -42,6 +61,38 @@ export function ActivityFeed({ activities, loading = false }: ActivityFeedProps)
     }
     return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]))
   }, [filtered])
+
+  const monthCells = useMemo(() => {
+    const year = calendarMonth.getFullYear()
+    const month = calendarMonth.getMonth()
+    const firstDay = new Date(year, month, 1)
+    const firstWeekday = (firstDay.getDay() + 6) % 7
+    const daysInMonth = new Date(year, month + 1, 0).getDate()
+    const daysInPrevMonth = new Date(year, month, 0).getDate()
+
+    const cells: Array<{ date: Date; dateKey: string; inMonth: boolean }> = []
+
+    for (let index = firstWeekday - 1; index >= 0; index -= 1) {
+      const day = daysInPrevMonth - index
+      const date = new Date(year, month - 1, day)
+      cells.push({ date, dateKey: toDateKey(date), inMonth: false })
+    }
+
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const date = new Date(year, month, day)
+      cells.push({ date, dateKey: toDateKey(date), inMonth: true })
+    }
+
+    while (cells.length % 7 !== 0 || cells.length < 35) {
+      const nextIndex = cells.length - (firstWeekday + daysInMonth) + 1
+      const date = new Date(year, month + 1, nextIndex)
+      cells.push({ date, dateKey: toDateKey(date), inMonth: false })
+    }
+
+    return cells
+  }, [calendarMonth])
+
+  const selectedDateActivities = groupedByDate.find(([date]) => date === selectedDate)?.[1] ?? []
 
   return (
     <section className="activity-feed card">
@@ -97,19 +148,80 @@ export function ActivityFeed({ activities, loading = false }: ActivityFeedProps)
         </div>
       ) : (
         <div className="activity-calendar">
-          {groupedByDate.map(([date, dateActivities]) => (
-            <div key={date} className="activity-calendar-day">
-              <div className="activity-calendar-date">{formatDate(date)}</div>
-              <div className="activity-calendar-items">
-                {dateActivities.map((activity) => (
+          <div className="calendar-header">
+            <button
+              type="button"
+              className="calendar-nav-btn"
+              onClick={() =>
+                setCalendarMonth(
+                  (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1),
+                )
+              }
+            >
+              Prev
+            </button>
+            <div className="calendar-month-label">{formatMonthYear(calendarMonth)}</div>
+            <button
+              type="button"
+              className="calendar-nav-btn"
+              onClick={() =>
+                setCalendarMonth(
+                  (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1),
+                )
+              }
+            >
+              Next
+            </button>
+          </div>
+
+          <div className="calendar-grid-wrap">
+            <div className="calendar-weekdays">
+              {weekLabels.map((label) => (
+                <span key={label}>{label}</span>
+              ))}
+            </div>
+
+            <div className="calendar-grid">
+              {monthCells.map((cell) => {
+                const dayActivities = groupedByDate.find(([date]) => date === cell.dateKey)?.[1] ?? []
+                const isToday = cell.dateKey === todayKey
+                const isSelected = cell.dateKey === selectedDate
+
+                return (
+                  <button
+                    type="button"
+                    key={cell.dateKey}
+                    className={`calendar-cell${cell.inMonth ? '' : ' muted'}${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}`}
+                    onClick={() => setSelectedDate(cell.dateKey)}
+                  >
+                    <span className="calendar-day-number">{cell.date.getDate()}</span>
+                    {dayActivities.length > 0 ? (
+                      <span className="calendar-dot" title={`${dayActivities.length} activities`}>
+                        {dayActivities.length}
+                      </span>
+                    ) : null}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="activity-calendar-day">
+            <div className="activity-calendar-date">{formatDate(selectedDate)}</div>
+            <div className="activity-calendar-items">
+              {selectedDateActivities.length === 0 ? (
+                <div className="activity-feed-empty">No activities on this date.</div>
+              ) : (
+                selectedDateActivities.map((activity) => (
                   <article key={activity.id} className="activity-calendar-item">
                     <strong>{activity.title}</strong>
                     <span>{activity.location}</span>
+                    <p>{activity.details}</p>
                   </article>
-                ))}
-              </div>
+                ))
+              )}
             </div>
-          ))}
+          </div>
         </div>
       )}
     </section>
