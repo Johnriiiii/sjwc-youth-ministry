@@ -414,7 +414,7 @@ function App() {
 
       {!authUser ? (
         <>
-          <Header subtitle="Account Access" />
+          <Header />
           <AuthPanel loading={loading} onSignup={onSignup} onLogin={onLogin} />
         </>
       ) : (
