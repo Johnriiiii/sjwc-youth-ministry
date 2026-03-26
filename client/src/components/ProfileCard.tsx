@@ -2,9 +2,10 @@ import type { AuthUser } from '../types'
 
 type ProfileCardProps = {
   user: AuthUser
+  onLogout?: () => void
 }
 
-export function ProfileCard({ user }: ProfileCardProps) {
+export function ProfileCard({ user, onLogout }: ProfileCardProps) {
   const initials = user.fullName
     .split(' ')
     .filter(Boolean)
@@ -23,6 +24,11 @@ export function ProfileCard({ user }: ProfileCardProps) {
           <p>{user.email}</p>
           <span className="profile-role">{user.role === 1 ? 'Admin Account' : 'Youth User Account'}</span>
         </div>
+        {onLogout && (
+          <button className="profile-logout-btn" onClick={onLogout} title="Logout">
+            🚪
+          </button>
+        )}
       </article>
     </section>
   )

@@ -218,6 +218,30 @@ body {
   color: #4f7d58;
 }
 
+.profile-logout-btn {
+  margin-left: auto;
+  border: none;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  border-radius: 12px;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  font-size: 1.3rem;
+  cursor: pointer;
+  box-shadow: 0 8px 16px rgba(180, 30, 30, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.profile-logout-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(180, 30, 30, 0.28);
+}
+
+.profile-logout-btn:active {
+  transform: translateY(0);
+}
+
 .profile-label {
   font-size: 0.65rem;
   letter-spacing: 0.12em;
@@ -2305,5 +2329,84 @@ button:focus-visible,
     right: 12px;
     left: 12px;
     min-width: 0;
+  }
+}
+
+/* Modal Overlay & Popout */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(3px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.modal-overlay.modal-visible {
+  display: flex;
+  opacity: 1;
+}
+
+.modal-popout {
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--card);
+  border-radius: 28px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.32), 0 0 1px rgba(0, 0, 0, 0.08);
+  animation: popoutSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes popoutSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-popout::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-popout::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-popout::-webkit-scrollbar-thumb {
+  background: rgba(141, 214, 49, 0.35);
+  border-radius: 4px;
+}
+
+.modal-popout::-webkit-scrollbar-thumb:hover {
+  background: rgba(141, 214, 49, 0.5);
+}
+
+.modal-popout .form-card {
+  margin: 0;
+  border-radius: 28px;
+}
+
+@media (max-width: 640px) {
+  .modal-overlay {
+    padding: 12px;
+  }
+
+  .modal-popout {
+    max-height: 95vh;
+    border-radius: 20px;
+  }
+
+  .modal-popout .form-card {
+    border-radius: 20px;
   }
 }

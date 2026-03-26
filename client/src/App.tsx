@@ -499,9 +499,13 @@ function App() {
             />
           ) : (
             <>
-              <ProfileCard user={authUser} />
-              <ActivityFeed activities={activities} loading={dataLoading} />
-              <section className="card">
+              {myLatestSubmission === null ? (
+                <Form loading={loading} onSubmit={onSubmitForm} />
+              ) : (
+                <>
+                  <ProfileCard user={authUser} onLogout={onLogout} />
+                  <ActivityFeed activities={activities} loading={dataLoading} />
+                  <section className="card">
                 <div className="card-accent"></div>
                 <div className="form-title">Messages</div>
                 <div className="form-desc">Updates and announcements from youth ministry administrators.</div>
@@ -561,37 +565,7 @@ function App() {
                   </div>
                 )}
               </section>
-              {myLatestSubmission ? (
-                <section className="card submitted-profile-card">
-                  <div className="card-accent"></div>
-                  <div className="form-title">Your Submitted Information</div>
-                  <div className="form-desc">You have already completed the youth information form.</div>
-
-                  <div className="submitted-photo-wrap">
-                    <div className="submitted-photo-ring">
-                      <img src={myLatestSubmission.photoData} alt={`${myLatestSubmission.fullName} profile`} />
-                    </div>
-                  </div>
-
-                  <div className="submitted-grid">
-                    <Detail label="Full Name" value={myLatestSubmission.fullName} />
-                    <Detail label="Middle Name" value={myLatestSubmission.middleName} />
-                    <Detail label="Gender" value={myLatestSubmission.gender || 'Not Set'} />
-                    <Detail label="Age" value={String(myLatestSubmission.age)} />
-                    <Detail label="Birthdate" value={myLatestSubmission.birthdate} />
-                    <Detail label="Contact Number" value={myLatestSubmission.contactNumber} />
-                    <Detail label="Address" value={myLatestSubmission.address} full />
-                    <Detail label="Parents/Guardian Contact" value={myLatestSubmission.guardianContact} />
-                    <Detail label="Emergency Contact Person" value={myLatestSubmission.emergencyContactPerson} />
-                    <Detail label="Emergency Contact Number" value={myLatestSubmission.emergencyContactNumber} />
-                  </div>
-
-                  <div className="user-logout-bottom">
-                    <button type="button" onClick={onLogout}>Logout</button>
-                  </div>
-                </section>
-              ) : (
-                <Form loading={loading} onSubmit={onSubmitForm} />
+                </>
               )}
             </>
           )}
@@ -607,21 +581,6 @@ function App() {
       </div>
 
       <div className={`toast ${toast ? 'show' : ''}`}>{toast}</div>
-    </div>
-  )
-}
-
-type DetailProps = {
-  label: string
-  value: string
-  full?: boolean
-}
-
-function Detail({ label, value, full }: DetailProps) {
-  return (
-    <div className={`submitted-detail ${full ? 'full' : ''}`}>
-      <span>{label}</span>
-      <strong>{value}</strong>
     </div>
   )
 }

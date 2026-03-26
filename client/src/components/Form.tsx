@@ -153,7 +153,9 @@ export function Form({ loading, onSubmit }: FormProps) {
   }
 
   return (
-    <div className="card form-card">
+    <div className="modal-overlay modal-visible">
+      <div className="modal-popout">
+        <div className="card form-card">
       <div className="card-accent"></div>
       <div className="form-title">Youth Information Form</div>
       <div className="form-desc">
@@ -352,6 +354,8 @@ export function Form({ loading, onSubmit }: FormProps) {
           <strong> St. Joseph the Worker Chapel</strong> youth ministry activities.
         </p>
       </form>
+        </div>
+      </div>
     </div>
   )
 }
