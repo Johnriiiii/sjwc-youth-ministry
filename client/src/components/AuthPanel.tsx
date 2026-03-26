@@ -36,6 +36,9 @@ export function AuthPanel({ loading, onSignup, onLogin }: AuthPanelProps) {
   return (
     <div className="auth-shell">
       <div className="auth-card">
+        <div className="auth-logo">
+          <img src="/logo.png" alt="St. Joseph the Worker Chapel Youth Council" className="logo-auth" />
+        </div>
         <div className="auth-head">
           <h2>{mode === 'login' ? 'Welcome Back' : 'Create an Account'}</h2>
           <p>
