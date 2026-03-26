@@ -43,7 +43,7 @@ export function AuthPanel({ loading, onSignup, onLogin }: AuthPanelProps) {
           <h2>{mode === 'login' ? 'Welcome Back' : 'Create an Account'}</h2>
           <p>
             {mode === 'login'
-              ? 'Login first before accessing the form or admin panel.'
+              ? 'Login first before accessing the form.'
               : 'Register your account to continue.'}
           </p>
         </div>
