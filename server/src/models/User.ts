@@ -6,6 +6,9 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true },
     role: { type: Number, enum: [0, 1], default: 0 },
+    isEmailVerified: { type: Boolean, default: true },
+    activationTokenHash: { type: String, default: null },
+    activationTokenExpiresAt: { type: Date, default: null },
   },
   { timestamps: true },
 )

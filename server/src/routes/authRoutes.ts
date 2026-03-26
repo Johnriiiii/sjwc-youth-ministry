@@ -3,6 +3,9 @@ import bcrypt from 'bcryptjs'
 import { UserModel } from '../models/User.js'
 import { signToken } from '../utils/token.js'
 import { requireAuth } from '../middleware/auth.js'
+import { env } from '../config/env.js'
+import { generateActivationToken, hashActivationToken } from '../utils/activation.js'
+import { sendActivationEmail } from '../utils/email.js'
 
 export const authRoutes = express.Router()
 
@@ -27,26 +30,27 @@ authRoutes.post('/signup', async (req, res) => {
   }
 
   const passwordHash = await bcrypt.hash(password, 10)
+  const { plainToken, tokenHash } = generateActivationToken()
+  const activationUrl = `${env.appBaseUrl}/api/auth/activate?token=${plainToken}`
+
   const user = await UserModel.create({
     fullName,
     email: email.toLowerCase(),
     passwordHash,
     role: 0,
+    isEmailVerified: false,
+    activationTokenHash: tokenHash,
+    activationTokenExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
   })
 
-  const token = signToken({
-    sub: user._id.toString(),
-    role: user.role === 1 ? 1 : 0,
-    email: user.email,
+  await sendActivationEmail({
+    to: user.email,
+    fullName: user.fullName,
+    activationUrl,
   })
+
   return res.status(201).json({
-    token,
-    user: {
-      id: user._id.toString(),
-      fullName: user.fullName,
-      email: user.email,
-      role: user.role,
-    },
+    message: 'Account created. Please check your email for activation link before logging in.',
   })
 })
 
@@ -67,6 +71,10 @@ authRoutes.post('/login', async (req, res) => {
     return res.status(401).json({ message: 'Invalid email or password' })
   }
 
+  if (user.isEmailVerified === false) {
+    return res.status(403).json({ message: 'Please activate your account via email before logging in.' })
+  }
+
   const token = signToken({
     sub: user._id.toString(),
     role: user.role === 1 ? 1 : 0,
@@ -82,6 +90,37 @@ authRoutes.post('/login', async (req, res) => {
       role: user.role,
     },
   })
+})
+
+authRoutes.get('/activate', async (req, res) => {
+  const token = typeof req.query.token === 'string' ? req.query.token : ''
+  if (!token) {
+    return res.status(400).send('<h3>Invalid activation link.</h3>')
+  }
+
+  const tokenHash = hashActivationToken(token)
+
+  const user = await UserModel.findOne({
+    activationTokenHash: tokenHash,
+    activationTokenExpiresAt: { $gt: new Date() },
+  })
+
+  if (!user) {
+    return res.status(400).send('<h3>Activation link is invalid or expired.</h3>')
+  }
+
+  user.isEmailVerified = true
+  user.activationTokenHash = null
+  user.activationTokenExpiresAt = null
+  await user.save()
+
+  return res.send(`
+    <div style="font-family: Arial, sans-serif; padding: 24px; color: #1f2937;">
+      <h2>Account activated successfully!</h2>
+      <p>You can now return to the app and log in.</p>
+      <a href="${env.clientOrigin}" style="display:inline-block;margin-top:12px;padding:10px 14px;background:#15803d;color:#fff;text-decoration:none;border-radius:8px;">Go to Login</a>
+    </div>
+  `)
 })
 
 authRoutes.get('/me', requireAuth, async (req, res) => {

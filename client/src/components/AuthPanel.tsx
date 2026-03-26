@@ -87,7 +87,7 @@ export function AuthPanel({ loading, onSignup, onLogin }: AuthPanelProps) {
               required
             />
           </div>
-          {mode === 'signup' && <p className="auth-note">New accounts are created as user access by default.</p>}
+          {mode === 'signup' && <p className="auth-note">An activation link will be sent to your Gmail before first login.</p>}
 
           {error && <p className="auth-error">{error}</p>}
 

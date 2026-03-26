@@ -5,6 +5,9 @@ import { SubmissionModel } from '../models/Submission.js';
 import { ActivityModel } from '../models/Activity.js';
 import { AdminAuditLogModel } from '../models/AdminAuditLog.js';
 import { UserModel } from '../models/User.js';
+import { env } from '../config/env.js';
+import { generateActivationToken } from '../utils/activation.js';
+import { sendActivationEmail } from '../utils/email.js';
 export const adminRoutes = express.Router();
 adminRoutes.use(requireAuth, requireAdmin);
 const toSafeStatus = (value) => (value === 'Approved' ? 'Approved' : 'Pending');
@@ -273,6 +276,8 @@ adminRoutes.post('/users', async (req, res) => {
     }
     const userRole = role === 1 ? 1 : 0;
     const passwordHash = await bcrypt.hash(password, 10);
+    const { plainToken, tokenHash } = generateActivationToken();
+    const activationUrl = `${env.appBaseUrl}/api/auth/activate?token=${plainToken}`;
     let created;
     try {
         created = await UserModel.create({
@@ -280,6 +285,9 @@ adminRoutes.post('/users', async (req, res) => {
             email: email.trim().toLowerCase(),
             passwordHash,
             role: userRole,
+            isEmailVerified: false,
+            activationTokenHash: tokenHash,
+            activationTokenExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
         });
     }
     catch (error) {
@@ -289,6 +297,11 @@ adminRoutes.post('/users', async (req, res) => {
         }
         throw error;
     }
+    await sendActivationEmail({
+        to: created.email,
+        fullName: created.fullName,
+        activationUrl,
+    });
     await writeAuditLog({
         adminId: req.auth?.sub,
         action: 'user.create',

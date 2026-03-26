@@ -138,10 +138,8 @@ function App() {
   }) => {
     setLoading(true)
     try {
-      const { token, user } = await signup(input)
-      saveToken(token)
-      setAuthUser(user)
-      setToast('You are signed up!')
+      const { message } = await signup(input)
+      setToast(message || 'Account created. Check your email to activate.')
       setSignupPopupVisible(true)
     } finally {
       setLoading(false)

@@ -56,7 +56,7 @@ export const signup = (input: {
   email: string
   password: string
   role?: Role
-}) => request<{ token: string; user: AuthUser }>('/auth/signup', { method: 'POST', body: input })
+}) => request<{ message: string }>('/auth/signup', { method: 'POST', body: input })
 
 export const login = (input: { email: string; password: string }) =>
   request<{ token: string; user: AuthUser }>('/auth/login', { method: 'POST', body: input })
