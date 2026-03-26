@@ -58,6 +58,9 @@ export const signup = (input: {
   role?: Role
 }) => request<{ message: string }>('/auth/signup', { method: 'POST', body: input })
 
+export const resendActivation = (input: { email: string }) =>
+  request<{ message: string }>('/auth/resend-activation', { method: 'POST', body: input })
+
 export const login = (input: { email: string; password: string }) =>
   request<{ token: string; user: AuthUser }>('/auth/login', { method: 'POST', body: input })
 

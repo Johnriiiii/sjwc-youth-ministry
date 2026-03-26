@@ -72,6 +72,45 @@ authRoutes.post('/signup', async (req, res) => {
   })
 })
 
+authRoutes.post('/resend-activation', async (req, res) => {
+  const { email } = req.body as { email?: string }
+
+  if (!email) {
+    return res.status(400).json({ message: 'Email is required' })
+  }
+
+  const user = await UserModel.findOne({ email: email.toLowerCase() })
+  if (!user) {
+    return res.json({ message: 'If this email is registered, a fresh activation link has been sent.' })
+  }
+
+  if (user.isEmailVerified) {
+    return res.json({ message: 'This account is already activated. You can log in now.' })
+  }
+
+  const { plainToken, tokenHash } = generateActivationToken()
+  user.activationTokenHash = tokenHash
+  user.activationTokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
+  await user.save()
+
+  try {
+    await sendActivationEmail({
+      to: user.email,
+      fullName: user.fullName,
+      activationUrl: `${resolveBackendOrigin(req)}/api/auth/activate?token=${plainToken}`,
+    })
+  } catch (error) {
+    return res.status(500).json({
+      message:
+        error instanceof Error
+          ? `Failed to send activation email: ${error.message}`
+          : 'Failed to send activation email.',
+    })
+  }
+
+  return res.json({ message: 'A fresh activation link has been sent to your email.' })
+})
+
 authRoutes.post('/login', async (req, res) => {
   const { email, password } = req.body as { email?: string; password?: string }
 

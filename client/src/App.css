@@ -477,6 +477,21 @@ body {
   font-size: 0.82rem;
 }
 
+.auth-resend {
+  border: 1px solid #9acb84;
+  background: #f2faec;
+  color: #1d6b2a;
+  border-radius: 10px;
+  padding: 9px 11px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-resend:hover {
+  background: #e7f5df;
+}
+
 .auth-note {
   color: #446f4f;
   font-size: 0.8rem;

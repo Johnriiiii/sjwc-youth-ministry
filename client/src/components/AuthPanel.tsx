@@ -5,14 +5,16 @@ type AuthPanelProps = {
   loading: boolean
   onSignup: (input: { fullName: string; email: string; password: string }) => Promise<void>
   onLogin: (input: { email: string; password: string }) => Promise<void>
+  onResendActivation: (email: string) => Promise<void>
 }
 
-export function AuthPanel({ loading, onSignup, onLogin }: AuthPanelProps) {
+export function AuthPanel({ loading, onSignup, onLogin, onResendActivation }: AuthPanelProps) {
   const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [resendLoading, setResendLoading] = useState(false)
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -25,11 +27,37 @@ export function AuthPanel({ loading, onSignup, onLogin }: AuthPanelProps) {
           return
         }
         await onSignup({ fullName, email, password })
+        setFullName('')
+        setEmail('')
+        setPassword('')
+        setMode('login')
       } else {
         await onLogin({ email, password })
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed')
+    }
+  }
+
+  const canResend =
+    mode === 'login' &&
+    error.toLowerCase().includes('please activate your account') &&
+    email.trim().length > 0
+
+  const resendActivation = async () => {
+    if (!email.trim()) {
+      setError('Enter your email address first.')
+      return
+    }
+
+    setResendLoading(true)
+    setError('')
+    try {
+      await onResendActivation(email.trim())
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to resend activation link')
+    } finally {
+      setResendLoading(false)
     }
   }
 
@@ -90,6 +118,11 @@ export function AuthPanel({ loading, onSignup, onLogin }: AuthPanelProps) {
           {mode === 'signup' && <p className="auth-note">An activation link will be sent to your Gmail before first login.</p>}
 
           {error && <p className="auth-error">{error}</p>}
+          {canResend && (
+            <button className="auth-resend" type="button" onClick={resendActivation} disabled={resendLoading || loading}>
+              {resendLoading ? 'Sending activation link...' : 'Resend activation link'}
+            </button>
+          )}
 
           <button className="auth-submit" type="submit" disabled={loading}>
             {loading ? 'Please wait...' : mode === 'login' ? 'Login' : 'Create Account'}

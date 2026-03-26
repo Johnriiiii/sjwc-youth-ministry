@@ -27,6 +27,7 @@ import {
   markMessageAsRead,
   me,
   readToken,
+  resendActivation,
   saveToken,
   sendMessage,
   signup,
@@ -156,6 +157,11 @@ function App() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const onResendActivation = async (email: string) => {
+    const { message } = await resendActivation({ email })
+    setToast(message || 'A fresh activation link has been sent to your email.')
   }
 
   const onSubmitForm = async (input: YouthFormInput) => {
@@ -463,7 +469,7 @@ function App() {
       {!authUser ? (
         <>
           <Header />
-          <AuthPanel loading={loading} onSignup={onSignup} onLogin={onLogin} />
+          <AuthPanel loading={loading} onSignup={onSignup} onLogin={onLogin} onResendActivation={onResendActivation} />
         </>
       ) : (
         <>
