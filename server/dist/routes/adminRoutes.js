@@ -1,8 +1,10 @@
 import express from 'express';
+import bcrypt from 'bcryptjs';
 import { requireAdmin, requireAuth } from '../middleware/auth.js';
 import { SubmissionModel } from '../models/Submission.js';
 import { ActivityModel } from '../models/Activity.js';
 import { AdminAuditLogModel } from '../models/AdminAuditLog.js';
+import { UserModel } from '../models/User.js';
 export const adminRoutes = express.Router();
 adminRoutes.use(requireAuth, requireAdmin);
 const toSafeStatus = (value) => (value === 'Approved' ? 'Approved' : 'Pending');
@@ -247,4 +249,136 @@ adminRoutes.get('/audit-logs', async (_req, res) => {
             adminId: item.adminId.toString(),
         })),
     });
+});
+adminRoutes.get('/users', async (_req, res) => {
+    const users = await UserModel.find().sort({ createdAt: -1 }).lean();
+    return res.json({
+        users: users.map((item) => ({
+            id: item._id.toString(),
+            fullName: item.fullName,
+            email: item.email,
+            role: item.role === 1 ? 1 : 0,
+            createdAt: item.createdAt,
+            updatedAt: item.updatedAt,
+        })),
+    });
+});
+adminRoutes.post('/users', async (req, res) => {
+    const { fullName, email, password, role } = req.body;
+    if (!fullName || !email || !password) {
+        return res.status(400).json({ message: 'fullName, email and password are required' });
+    }
+    if (password.length < 6) {
+        return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+    const userRole = role === 1 ? 1 : 0;
+    const passwordHash = await bcrypt.hash(password, 10);
+    let created;
+    try {
+        created = await UserModel.create({
+            fullName: fullName.trim(),
+            email: email.trim().toLowerCase(),
+            passwordHash,
+            role: userRole,
+        });
+    }
+    catch (error) {
+        const code = error.code;
+        if (code === 11000) {
+            return res.status(409).json({ message: 'Email is already registered' });
+        }
+        throw error;
+    }
+    await writeAuditLog({
+        adminId: req.auth?.sub,
+        action: 'user.create',
+        entityType: 'user',
+        entityId: created._id.toString(),
+        summary: `Created ${created.email} (${created.role === 1 ? 'Admin' : 'User'})`,
+    });
+    return res.status(201).json({
+        user: {
+            id: created._id.toString(),
+            fullName: created.fullName,
+            email: created.email,
+            role: created.role === 1 ? 1 : 0,
+            createdAt: created.createdAt,
+            updatedAt: created.updatedAt,
+        },
+    });
+});
+adminRoutes.patch('/users/:id', async (req, res) => {
+    const { id } = req.params;
+    const { fullName, email, password, role } = req.body;
+    const patch = {};
+    if (typeof fullName === 'string') {
+        patch.fullName = fullName.trim();
+    }
+    if (typeof email === 'string') {
+        patch.email = email.trim().toLowerCase();
+    }
+    if (role === 0 || role === 1) {
+        patch.role = role;
+    }
+    if (typeof password === 'string') {
+        if (password.length < 6) {
+            return res.status(400).json({ message: 'Password must be at least 6 characters' });
+        }
+        patch.passwordHash = await bcrypt.hash(password, 10);
+    }
+    if (!Object.keys(patch).length) {
+        return res.status(400).json({ message: 'No editable fields provided' });
+    }
+    let updated;
+    try {
+        updated = await UserModel.findByIdAndUpdate(id, patch, {
+            new: true,
+            runValidators: true,
+        }).lean();
+    }
+    catch (error) {
+        const code = error.code;
+        if (code === 11000) {
+            return res.status(409).json({ message: 'Email is already registered' });
+        }
+        throw error;
+    }
+    if (!updated) {
+        return res.status(404).json({ message: 'User not found' });
+    }
+    await writeAuditLog({
+        adminId: req.auth?.sub,
+        action: 'user.edit',
+        entityType: 'user',
+        entityId: updated._id.toString(),
+        summary: `Edited ${updated.email} (${updated.role === 1 ? 'Admin' : 'User'})`,
+    });
+    return res.json({
+        user: {
+            id: updated._id.toString(),
+            fullName: updated.fullName,
+            email: updated.email,
+            role: updated.role === 1 ? 1 : 0,
+            createdAt: updated.createdAt,
+            updatedAt: updated.updatedAt,
+        },
+    });
+});
+adminRoutes.delete('/users/:id', async (req, res) => {
+    const { id } = req.params;
+    if (req.auth?.sub === id) {
+        return res.status(400).json({ message: 'You cannot delete your own account' });
+    }
+    const deleted = await UserModel.findByIdAndDelete(id).lean();
+    if (!deleted) {
+        return res.status(404).json({ message: 'User not found' });
+    }
+    await writeAuditLog({
+        adminId: req.auth?.sub,
+        action: 'user.delete',
+        entityType: 'user',
+        entityId: deleted._id.toString(),
+        summary: `Deleted ${deleted.email}`,
+    });
+    return res.json({ success: true });
 });
