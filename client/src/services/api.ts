@@ -1,6 +1,7 @@
 import type {
   Activity,
   ActivityStatus,
+  AdminAccount,
   AdminAuditLog,
   AuthUser,
   Role,
@@ -158,3 +159,43 @@ export const updateAdminActivityStatus = (token: string, id: string, status: Act
 
 export const listAdminAuditLogs = (token: string) =>
   request<{ logs: AdminAuditLog[] }>('/admin/audit-logs', { token })
+
+export const listAdminUsers = (token: string) =>
+  request<{ users: AdminAccount[] }>('/admin/users', { token })
+
+export const createAdminUser = (
+  token: string,
+  input: {
+    fullName: string
+    email: string
+    password: string
+    role: Role
+  },
+) =>
+  request<{ user: AdminAccount }>('/admin/users', {
+    method: 'POST',
+    token,
+    body: input,
+  })
+
+export const updateAdminUser = (
+  token: string,
+  id: string,
+  input: {
+    fullName?: string
+    email?: string
+    password?: string
+    role?: Role
+  },
+) =>
+  request<{ user: AdminAccount }>(`/admin/users/${id}`, {
+    method: 'PATCH',
+    token,
+    body: input,
+  })
+
+export const deleteAdminUser = (token: string, id: string) =>
+  request<{ success: true }>(`/admin/users/${id}`, {
+    method: 'DELETE',
+    token,
+  })

@@ -9,14 +9,17 @@ import { ProfileCard } from './components/ProfileCard'
 import {
   clearToken,
   createAdminActivity,
+  createAdminUser,
   createSubmission,
   deleteAdminActivity,
+  deleteAdminUser,
   deleteAdminSubmission,
   listActivities,
   listAdminAuditLogs,
   listAdminActivities,
   listMySubmissions,
   listAdminSubmissions,
+  listAdminUsers,
   login,
   me,
   readToken,
@@ -25,11 +28,13 @@ import {
   updateAdminActivity,
   updateAdminActivityStatus,
   updateAdminSubmission,
+  updateAdminUser,
   updateSubmissionStatus,
 } from './services/api'
 import type {
   Activity,
   ActivityStatus,
+  AdminAccount,
   AdminAuditLog,
   AuthUser,
   Submission,
@@ -42,6 +47,7 @@ function App() {
   const [submissions, setSubmissions] = useState<Submission[]>([])
   const [activities, setActivities] = useState<Activity[]>([])
   const [auditLogs, setAuditLogs] = useState<AdminAuditLog[]>([])
+  const [accounts, setAccounts] = useState<AdminAccount[]>([])
   const [myLatestSubmission, setMyLatestSubmission] = useState<Submission | null>(null)
   const [booting, setBooting] = useState(true)
   const [dataLoading, setDataLoading] = useState(false)
@@ -72,6 +78,7 @@ function App() {
       setSubmissions([])
       setActivities([])
       setAuditLogs([])
+      setAccounts([])
       setMyLatestSubmission(null)
       return
     }
@@ -92,11 +99,12 @@ function App() {
       return
     }
 
-    Promise.all([listAdminSubmissions(token), listAdminActivities(token), listAdminAuditLogs(token)])
-      .then(([submissionRows, activityRows, logRows]) => {
+    Promise.all([listAdminSubmissions(token), listAdminActivities(token), listAdminAuditLogs(token), listAdminUsers(token)])
+      .then(([submissionRows, activityRows, logRows, userRows]) => {
         setSubmissions(submissionRows.submissions)
         setActivities(activityRows.activities)
         setAuditLogs(logRows.logs)
+        setAccounts(userRows.users)
       })
       .catch((error) => setToast(error.message || 'Failed to load submissions'))
       .finally(() => setDataLoading(false))
@@ -271,12 +279,59 @@ function App() {
     setAuditLogs(logs.logs)
   }
 
+  const onCreateAccount = async (input: {
+    fullName: string
+    email: string
+    password: string
+    role: 0 | 1
+  }) => {
+    const token = readToken()
+    if (!token) throw new Error('Please login first')
+
+    const { user } = await createAdminUser(token, input)
+    setAccounts((prev) => [user, ...prev])
+    setToast('Account created')
+    const logs = await listAdminAuditLogs(token)
+    setAuditLogs(logs.logs)
+  }
+
+  const onEditAccount = async (
+    id: string,
+    input: {
+      fullName?: string
+      email?: string
+      password?: string
+      role?: 0 | 1
+    },
+  ) => {
+    const token = readToken()
+    if (!token) throw new Error('Please login first')
+
+    const { user } = await updateAdminUser(token, id, input)
+    setAccounts((prev) => prev.map((item) => (item.id === id ? user : item)))
+    setToast('Account updated')
+    const logs = await listAdminAuditLogs(token)
+    setAuditLogs(logs.logs)
+  }
+
+  const onDeleteAccount = async (id: string) => {
+    const token = readToken()
+    if (!token) throw new Error('Please login first')
+
+    await deleteAdminUser(token, id)
+    setAccounts((prev) => prev.filter((item) => item.id !== id))
+    setToast('Account deleted')
+    const logs = await listAdminAuditLogs(token)
+    setAuditLogs(logs.logs)
+  }
+
   const onLogout = () => {
     clearToken()
     setAuthUser(null)
     setSubmissions([])
     setActivities([])
     setAuditLogs([])
+    setAccounts([])
     setMyLatestSubmission(null)
     setToast('Logged out')
   }
@@ -377,6 +432,11 @@ function App() {
               onEditActivity={onEditActivity}
               onUpdateActivityStatus={onUpdateActivityStatus}
               onDeleteActivity={onDeleteActivity}
+              accounts={accounts}
+              currentAdminId={authUser.id}
+              onCreateAccount={onCreateAccount}
+              onEditAccount={onEditAccount}
+              onDeleteAccount={onDeleteAccount}
               auditLogs={auditLogs}
               onLogout={onLogout}
             />

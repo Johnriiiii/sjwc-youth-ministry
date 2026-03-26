@@ -1366,6 +1366,102 @@ button:focus-visible,
   font-size: 0.85rem;
 }
 
+.settings-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) 1fr;
+  gap: 16px;
+}
+
+.settings-form,
+.settings-list {
+  background: var(--card);
+  border-radius: 16px;
+  border: 1.5px solid var(--border);
+  padding: 18px;
+}
+
+.settings-form h3,
+.settings-list h3 {
+  font-family: 'Playfair Display', serif;
+  color: var(--dark);
+  margin-bottom: 12px;
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--mid);
+}
+
+.settings-form input,
+.settings-form select,
+.settings-edit-grid input,
+.settings-edit-grid select {
+  border: 1.2px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 10px;
+  font-size: 0.88rem;
+  background: #fff;
+  color: var(--dark);
+}
+
+.settings-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-item {
+  border: 1px solid #e2f3e2;
+  border-radius: 12px;
+  padding: 12px;
+  background: #f6fdf6;
+}
+
+.settings-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-edit-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.account-role {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.account-role.admin {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+.account-role.user {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
 .activity-feed {
   max-width: 700px;
 }
@@ -1910,6 +2006,9 @@ button:focus-visible,
     height: 210px;
   }
   .activity-admin-grid {
+    grid-template-columns: 1fr;
+  }
+  .settings-grid {
     grid-template-columns: 1fr;
   }
   .signup-popup {

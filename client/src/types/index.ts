@@ -7,6 +7,15 @@ export type AuthUser = {
   role: Role
 }
 
+export type AdminAccount = {
+  id: string
+  fullName: string
+  email: string
+  role: Role
+  createdAt: string
+  updatedAt: string
+}
+
 export type YouthFormInput = {
   fullName: string
   middleName: string

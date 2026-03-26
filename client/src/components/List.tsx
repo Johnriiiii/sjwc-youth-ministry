@@ -19,6 +19,7 @@ import { Card } from './Card'
 import type {
   Activity,
   ActivityStatus,
+  AdminAccount,
   AdminAuditLog,
   Submission,
   SubmissionStatus,
@@ -62,6 +63,24 @@ type ListProps = {
   }) => Promise<void>
   onUpdateActivityStatus: (id: string, status: ActivityStatus) => Promise<void>
   onDeleteActivity: (id: string) => Promise<void>
+  accounts: AdminAccount[]
+  currentAdminId: string
+  onCreateAccount: (input: {
+    fullName: string
+    email: string
+    password: string
+    role: 0 | 1
+  }) => Promise<void>
+  onEditAccount: (
+    id: string,
+    input: {
+      fullName?: string
+      email?: string
+      password?: string
+      role?: 0 | 1
+    },
+  ) => Promise<void>
+  onDeleteAccount: (id: string) => Promise<void>
   auditLogs: AdminAuditLog[]
   onLogout: () => void
 }
@@ -99,6 +118,20 @@ type EditDraft = {
   emergencyContactNumber: string
 }
 
+type AccountDraft = {
+  fullName: string
+  email: string
+  password: string
+  role: 0 | 1
+}
+
+type EditAccountDraft = {
+  fullName: string
+  email: string
+  password: string
+  role: 0 | 1
+}
+
 const toEditDraft = (submission: Submission): EditDraft => ({
   fullName: submission.fullName,
   middleName: submission.middleName,
@@ -134,10 +167,15 @@ export function List({
   onEditActivity,
   onUpdateActivityStatus,
   onDeleteActivity,
+  accounts,
+  currentAdminId,
+  onCreateAccount,
+  onEditAccount,
+  onDeleteAccount,
   auditLogs,
   onLogout,
 }: ListProps) {
-  const [activeTab, setActiveTab] = useState<'registrations' | 'analytics' | 'activities'>('registrations')
+  const [activeTab, setActiveTab] = useState<'registrations' | 'analytics' | 'activities' | 'settings'>('registrations')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'' | SubmissionStatus>('')
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name'>('newest')
@@ -161,6 +199,14 @@ export function List({
     location: string
     status: ActivityStatus
   } | null>(null)
+  const [accountDraft, setAccountDraft] = useState<AccountDraft>({
+    fullName: '',
+    email: '',
+    password: '',
+    role: 0,
+  })
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null)
+  const [editingAccountDraft, setEditingAccountDraft] = useState<EditAccountDraft | null>(null)
 
   const stats = useMemo(() => {
     return {
@@ -551,6 +597,104 @@ export function List({
     }
   }
 
+  const submitAccount = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!accountDraft.fullName.trim() || !accountDraft.email.trim() || !accountDraft.password.trim()) {
+      window.alert('Please complete full name, email, and password')
+      return
+    }
+    if (accountDraft.password.trim().length < 6) {
+      window.alert('Password must be at least 6 characters')
+      return
+    }
+
+    setWorking(true)
+    try {
+      await onCreateAccount({
+        fullName: accountDraft.fullName.trim(),
+        email: accountDraft.email.trim().toLowerCase(),
+        password: accountDraft.password.trim(),
+        role: accountDraft.role,
+      })
+      setAccountDraft({ fullName: '', email: '', password: '', role: 0 })
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Failed to create account')
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  const beginAccountEdit = (account: AdminAccount) => {
+    setEditingAccountId(account.id)
+    setEditingAccountDraft({
+      fullName: account.fullName,
+      email: account.email,
+      password: '',
+      role: account.role,
+    })
+  }
+
+  const cancelAccountEdit = () => {
+    setEditingAccountId(null)
+    setEditingAccountDraft(null)
+  }
+
+  const saveAccountEdit = async (id: string) => {
+    if (!editingAccountDraft) return
+
+    const payload: {
+      fullName?: string
+      email?: string
+      password?: string
+      role?: 0 | 1
+    } = {
+      fullName: editingAccountDraft.fullName.trim(),
+      email: editingAccountDraft.email.trim().toLowerCase(),
+      role: editingAccountDraft.role,
+    }
+
+    const password = editingAccountDraft.password.trim()
+    if (password) {
+      if (password.length < 6) {
+        window.alert('Password must be at least 6 characters')
+        return
+      }
+      payload.password = password
+    }
+
+    setWorking(true)
+    try {
+      await onEditAccount(id, payload)
+      cancelAccountEdit()
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Failed to update account')
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  const removeAccount = async (account: AdminAccount) => {
+    if (account.id === currentAdminId) {
+      window.alert('You cannot delete your own account')
+      return
+    }
+
+    const shouldDelete = window.confirm(`Delete account for ${account.email}?`)
+    if (!shouldDelete) return
+
+    setWorking(true)
+    try {
+      await onDeleteAccount(account.id)
+      if (editingAccountId === account.id) {
+        cancelAccountEdit()
+      }
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Failed to delete account')
+    } finally {
+      setWorking(false)
+    }
+  }
+
   return (
     <div className="admin-layout">
       <div className="sidebar">
@@ -583,7 +727,13 @@ export function List({
           >
             <span className="ico">📅</span><span>Activities</span>
           </button>
-          <div className="sb-item"><span className="ico">⚙️</span><span>Settings</span></div>
+          <button
+            type="button"
+            className={`sb-item ${activeTab === 'settings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('settings')}
+          >
+            <span className="ico">⚙️</span><span>Settings</span>
+          </button>
         </div>
         <div className="sb-stats">
           <div className="sb-stat"><span className="sb-stat-label">Total</span><span className="sb-stat-val">{stats.total}</span></div>
@@ -918,6 +1068,179 @@ export function List({
                   </div>
                 )}
               </div>
+            </div>
+          </>
+        ) : activeTab === 'settings' ? (
+          <>
+            <div className="topbar">
+              <div>
+                <div className="page-title">Account <span>Settings</span></div>
+                <div className="page-sub">Manage admin and user accounts (create, read, update, delete)</div>
+              </div>
+            </div>
+
+            <div className="settings-grid">
+              <form className="settings-form" onSubmit={(event) => void submitAccount(event)}>
+                <h3>Create Account</h3>
+                <label>
+                  Full Name
+                  <input
+                    type="text"
+                    value={accountDraft.fullName}
+                    onChange={(event) => setAccountDraft((prev) => ({ ...prev, fullName: event.target.value }))}
+                    placeholder="Juan Dela Cruz"
+                  />
+                </label>
+                <label>
+                  Email
+                  <input
+                    type="email"
+                    value={accountDraft.email}
+                    onChange={(event) => setAccountDraft((prev) => ({ ...prev, email: event.target.value }))}
+                    placeholder="name@example.com"
+                  />
+                </label>
+                <label>
+                  Password
+                  <input
+                    type="password"
+                    value={accountDraft.password}
+                    onChange={(event) => setAccountDraft((prev) => ({ ...prev, password: event.target.value }))}
+                    placeholder="At least 6 characters"
+                  />
+                </label>
+                <label>
+                  Role
+                  <select
+                    value={String(accountDraft.role)}
+                    onChange={(event) =>
+                      setAccountDraft((prev) => ({
+                        ...prev,
+                        role: Number(event.target.value) === 1 ? 1 : 0,
+                      }))
+                    }
+                  >
+                    <option value="0">User</option>
+                    <option value="1">Admin</option>
+                  </select>
+                </label>
+                <button type="submit" className="btn btn-excel" disabled={working}>Create Account</button>
+              </form>
+
+              <section className="settings-list">
+                <h3>Existing Accounts ({accounts.length})</h3>
+                {accounts.length === 0 ? (
+                  <p className="activity-empty">No accounts found.</p>
+                ) : (
+                  <div className="settings-items">
+                    {accounts.map((account) => {
+                      const isEditing = editingAccountId === account.id && editingAccountDraft
+                      return (
+                        <article key={account.id} className="settings-item">
+                          {isEditing ? (
+                            <>
+                              <div className="settings-edit-grid">
+                                <input
+                                  type="text"
+                                  value={editingAccountDraft.fullName}
+                                  onChange={(event) =>
+                                    setEditingAccountDraft((prev) =>
+                                      prev ? { ...prev, fullName: event.target.value } : prev,
+                                    )
+                                  }
+                                  placeholder="Full name"
+                                />
+                                <input
+                                  type="email"
+                                  value={editingAccountDraft.email}
+                                  onChange={(event) =>
+                                    setEditingAccountDraft((prev) =>
+                                      prev ? { ...prev, email: event.target.value } : prev,
+                                    )
+                                  }
+                                  placeholder="Email"
+                                />
+                                <input
+                                  type="password"
+                                  value={editingAccountDraft.password}
+                                  onChange={(event) =>
+                                    setEditingAccountDraft((prev) =>
+                                      prev ? { ...prev, password: event.target.value } : prev,
+                                    )
+                                  }
+                                  placeholder="Leave blank to keep current password"
+                                />
+                                <select
+                                  value={String(editingAccountDraft.role)}
+                                  onChange={(event) =>
+                                    setEditingAccountDraft((prev) =>
+                                      prev
+                                        ? {
+                                            ...prev,
+                                            role: Number(event.target.value) === 1 ? 1 : 0,
+                                          }
+                                        : prev,
+                                    )
+                                  }
+                                >
+                                  <option value="0">User</option>
+                                  <option value="1">Admin</option>
+                                </select>
+                              </div>
+                              <div className="activity-action-row">
+                                <button
+                                  type="button"
+                                  className="action-btn action-btn-edit"
+                                  disabled={working}
+                                  onClick={() => {
+                                    void saveAccountEdit(account.id)
+                                  }}
+                                >
+                                  Save
+                                </button>
+                                <button type="button" className="action-btn" onClick={cancelAccountEdit}>
+                                  Cancel
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="settings-item-top">
+                                <strong>{account.fullName}</strong>
+                                <span className={`account-role ${account.role === 1 ? 'admin' : 'user'}`}>
+                                  {account.role === 1 ? 'Admin' : 'User'}
+                                </span>
+                              </div>
+                              <div className="activity-meta">{account.email}</div>
+                              <div className="activity-meta">Created: {dateText(account.createdAt)}</div>
+                              <div className="activity-action-row">
+                                <button
+                                  type="button"
+                                  className="action-btn action-btn-edit"
+                                  disabled={working}
+                                  onClick={() => beginAccountEdit(account)}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  className="action-btn action-btn-delete"
+                                  disabled={working || account.id === currentAdminId}
+                                  onClick={() => {
+                                    void removeAccount(account)
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </article>
+                      )
+                    })}
+                  </div>
+                )}
+              </section>
             </div>
           </>
         ) : (
