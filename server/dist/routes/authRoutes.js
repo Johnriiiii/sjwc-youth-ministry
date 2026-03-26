@@ -7,6 +7,12 @@ import { env } from '../config/env.js';
 import { generateActivationToken, hashActivationToken } from '../utils/activation.js';
 import { sendActivationEmail } from '../utils/email.js';
 export const authRoutes = express.Router();
+const resolveBackendOrigin = (req) => {
+    const forwardedProto = req.header('x-forwarded-proto')?.split(',')[0]?.trim();
+    const protocol = forwardedProto || req.protocol;
+    const host = req.get('host');
+    return host ? `${protocol}://${host}` : env.appBaseUrl;
+};
 authRoutes.post('/signup', async (req, res) => {
     const { fullName, email, password } = req.body;
     if (!fullName || !email || !password) {
@@ -21,7 +27,7 @@ authRoutes.post('/signup', async (req, res) => {
     }
     const passwordHash = await bcrypt.hash(password, 10);
     const { plainToken, tokenHash } = generateActivationToken();
-    const activationUrl = `${env.appBaseUrl}/api/auth/activate?token=${plainToken}`;
+    const activationUrl = `${resolveBackendOrigin(req)}/api/auth/activate?token=${plainToken}`;
     const user = await UserModel.create({
         fullName,
         email: email.toLowerCase(),

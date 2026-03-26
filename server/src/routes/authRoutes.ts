@@ -9,6 +9,14 @@ import { sendActivationEmail } from '../utils/email.js'
 
 export const authRoutes = express.Router()
 
+const resolveBackendOrigin = (req: express.Request) => {
+  const forwardedProto = req.header('x-forwarded-proto')?.split(',')[0]?.trim()
+  const protocol = forwardedProto || req.protocol
+  const host = req.get('host')
+
+  return host ? `${protocol}://${host}` : env.appBaseUrl
+}
+
 authRoutes.post('/signup', async (req, res) => {
   const { fullName, email, password } = req.body as {
     fullName?: string
@@ -31,7 +39,7 @@ authRoutes.post('/signup', async (req, res) => {
 
   const passwordHash = await bcrypt.hash(password, 10)
   const { plainToken, tokenHash } = generateActivationToken()
-  const activationUrl = `${env.appBaseUrl}/api/auth/activate?token=${plainToken}`
+  const activationUrl = `${resolveBackendOrigin(req)}/api/auth/activate?token=${plainToken}`
 
   const user = await UserModel.create({
     fullName,

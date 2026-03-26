@@ -13,6 +13,14 @@ export const adminRoutes = express.Router()
 
 adminRoutes.use(requireAuth, requireAdmin)
 
+const resolveBackendOrigin = (req: express.Request) => {
+  const forwardedProto = req.header('x-forwarded-proto')?.split(',')[0]?.trim()
+  const protocol = forwardedProto || req.protocol
+  const host = req.get('host')
+
+  return host ? `${protocol}://${host}` : env.appBaseUrl
+}
+
 const toSafeStatus = (value: unknown) => (value === 'Approved' ? 'Approved' : 'Pending')
 
 const mapSubmission = (item: {
@@ -364,7 +372,7 @@ adminRoutes.post('/users', async (req, res) => {
   const userRole = role === 1 ? 1 : 0
   const passwordHash = await bcrypt.hash(password, 10)
   const { plainToken, tokenHash } = generateActivationToken()
-  const activationUrl = `${env.appBaseUrl}/api/auth/activate?token=${plainToken}`
+  const activationUrl = `${resolveBackendOrigin(req)}/api/auth/activate?token=${plainToken}`
 
   let created
   try {
