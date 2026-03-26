@@ -8,6 +8,8 @@ import {
   CartesianGrid,
   Cell,
   Legend,
+  Line,
+  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -248,6 +250,12 @@ export function List({
       pending: submissions.filter((row) => row.status === 'Pending').length,
     }
 
+    const approvalRate = total ? Math.round((status.approved / total) * 100) : 0
+    const pendingRate = total ? Math.round((status.pending / total) * 100) : 0
+    const avgAge = total
+      ? Math.round((submissions.reduce((sum, row) => sum + (Number.isFinite(row.age) ? row.age : 0), 0) / total) * 10) / 10
+      : 0
+
     const genderMap = new Map<string, number>()
     const ageBuckets = {
       '12 and below': 0,
@@ -294,11 +302,60 @@ export function List({
       pct: total ? Math.round((count / total) * 100) : 0,
     }))
 
+    const now = new Date()
+    const monthBuckets: { key: string; label: string; count: number }[] = []
+    for (let offset = 5; offset >= 0; offset -= 1) {
+      const d = new Date(now.getFullYear(), now.getMonth() - offset, 1)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      monthBuckets.push({
+        key,
+        label: d.toLocaleString('en-PH', { month: 'short' }),
+        count: 0,
+      })
+    }
+
+    for (const row of submissions) {
+      const date = new Date(row.createdAt)
+      if (Number.isNaN(date.getTime())) continue
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      const bucket = monthBuckets.find((item) => item.key === key)
+      if (bucket) bucket.count += 1
+    }
+
+    let cumulative = 0
+    const monthlyRegistrations = monthBuckets.map((item) => {
+      cumulative += item.count
+      return {
+        label: item.label,
+        count: item.count,
+        cumulative,
+      }
+    })
+
+    const msDay = 1000 * 60 * 60 * 24
+    const recentStart = now.getTime() - 30 * msDay
+    const prevStart = now.getTime() - 60 * msDay
+    const recent30 = submissions.filter((row) => {
+      const t = new Date(row.createdAt).getTime()
+      return t >= recentStart
+    }).length
+    const previous30 = submissions.filter((row) => {
+      const t = new Date(row.createdAt).getTime()
+      return t >= prevStart && t < recentStart
+    }).length
+    const growthPct = previous30 === 0 ? (recent30 > 0 ? 100 : 0) : Math.round(((recent30 - previous30) / previous30) * 100)
+
     return {
       total,
+      approvalRate,
+      pendingRate,
+      avgAge,
+      recent30,
+      growthPct,
       statusSegments,
       genders,
       ages,
+      monthlyRegistrations,
     }
   }, [submissions])
 
@@ -1487,6 +1544,29 @@ export function List({
               </div>
             </div>
 
+            <div className="analytics-kpi-grid">
+              <article className="analytics-kpi-card">
+                <span>Total Registrations</span>
+                <strong>{analytics.total}</strong>
+                <small>{analytics.recent30} in last 30 days</small>
+              </article>
+              <article className="analytics-kpi-card">
+                <span>Approval Rate</span>
+                <strong>{analytics.approvalRate}%</strong>
+                <small>{analytics.pendingRate}% pending</small>
+              </article>
+              <article className="analytics-kpi-card">
+                <span>Average Age</span>
+                <strong>{analytics.avgAge || 0}</strong>
+                <small>Across all submitted records</small>
+              </article>
+              <article className="analytics-kpi-card">
+                <span>30-Day Growth</span>
+                <strong>{analytics.growthPct > 0 ? `+${analytics.growthPct}` : analytics.growthPct}%</strong>
+                <small>Compared to previous 30 days</small>
+              </article>
+            </div>
+
             <div className="analytics-grid">
               <section className="analytics-card analytics-pie-card">
                 <h3>3D Pie: Registration Status</h3>
@@ -1537,6 +1617,23 @@ export function List({
                     <strong>{analytics.total}</strong>
                     <span>Total Users</span>
                   </div>
+                </div>
+              </section>
+
+              <section className="analytics-card">
+                <h3>6-Month Registration Trend</h3>
+                <div className="chart-frame">
+                  <ResponsiveContainer width="100%" height={280}>
+                    <LineChart data={analytics.monthlyRegistrations} margin={{ top: 8, right: 10, left: 0, bottom: 8 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#d7ebd8" />
+                      <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#356744' }} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#356744' }} />
+                      <Tooltip />
+                      <Legend verticalAlign="top" height={28} iconType="circle" />
+                      <Line type="monotone" dataKey="count" name="Monthly" stroke="#2f9c5f" strokeWidth={3} dot={{ r: 4 }} />
+                      <Line type="monotone" dataKey="cumulative" name="Cumulative" stroke="#e7a23a" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
               </section>
 
