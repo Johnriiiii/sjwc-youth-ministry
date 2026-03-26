@@ -15,10 +15,14 @@ export const env = {
   mongoUri: process.env.MONGODB_URI as string,
   jwtSecret: process.env.JWT_SECRET as string,
   clientOrigin: process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
-  appBaseUrl: process.env.APP_BASE_URL ?? process.env.CLIENT_ORIGIN ?? 'http://localhost:5173',
+  appBaseUrl:
+    process.env.APP_BASE_URL ??
+    process.env.BASE_URL ??
+    process.env.CLIENT_ORIGIN ??
+    'http://localhost:5173',
   smtpHost: process.env.SMTP_HOST,
   smtpPort: Number(process.env.SMTP_PORT ?? 587),
-  smtpUser: process.env.SMTP_USER,
-  smtpPass: process.env.SMTP_PASS,
+  smtpUser: process.env.SMTP_USER ?? process.env.SMTP_LOGIN,
+  smtpPass: process.env.SMTP_PASS ?? process.env.SMTP_KEY,
   smtpFrom: process.env.SMTP_FROM ?? 'SJWC Youth Ministry <no-reply@sjwc-youth.local>',
 }
