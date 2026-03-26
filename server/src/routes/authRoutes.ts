@@ -17,6 +17,120 @@ const resolveBackendOrigin = (req: express.Request) => {
   return host ? `${protocol}://${host}` : env.appBaseUrl
 }
 
+const renderActivationPage = (input: {
+  title: string
+  message: string
+  ctaLabel: string
+  ctaHref: string
+  tone: 'success' | 'error'
+}) => {
+  const isSuccess = input.tone === 'success'
+  const badgeText = isSuccess ? 'Account Ready' : 'Activation Needed'
+
+  return `
+  <!doctype html>
+  <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <title>${input.title}</title>
+      <style>
+        :root {
+          --bg-1: #77cf1f;
+          --bg-2: #2ead38;
+          --card: rgba(244, 250, 238, 0.94);
+          --text: #113a20;
+          --muted: #487256;
+          --accent: #f2df14;
+          --accent-2: #8fd02f;
+          --danger: #c03939;
+          --success: #1f8a43;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+          margin: 0;
+          min-height: 100vh;
+          display: grid;
+          place-items: center;
+          font-family: 'Segoe UI', Tahoma, sans-serif;
+          background:
+            radial-gradient(circle at 10% 10%, rgba(255, 255, 255, 0.14), transparent 45%),
+            radial-gradient(circle at 90% 90%, rgba(245, 225, 24, 0.2), transparent 35%),
+            linear-gradient(140deg, var(--bg-1), var(--bg-2));
+          color: var(--text);
+          padding: 20px;
+        }
+
+        .panel {
+          width: min(560px, 100%);
+          background: var(--card);
+          border-radius: 24px;
+          padding: 28px 24px;
+          border: 1px solid rgba(255, 255, 255, 0.78);
+          box-shadow: 0 24px 60px rgba(0, 70, 0, 0.24);
+        }
+
+        .badge {
+          display: inline-block;
+          margin-bottom: 14px;
+          padding: 6px 11px;
+          border-radius: 999px;
+          font-size: 12px;
+          font-weight: 700;
+          letter-spacing: 0.05em;
+          text-transform: uppercase;
+          background: ${isSuccess ? 'rgba(31, 138, 67, 0.14)' : 'rgba(192, 57, 57, 0.14)'};
+          color: ${isSuccess ? 'var(--success)' : 'var(--danger)'};
+        }
+
+        h1 {
+          margin: 0 0 10px;
+          font-size: 30px;
+          line-height: 1.15;
+        }
+
+        p {
+          margin: 0;
+          color: var(--muted);
+          font-size: 16px;
+        }
+
+        .cta {
+          margin-top: 24px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          text-decoration: none;
+          padding: 12px 18px;
+          border-radius: 12px;
+          font-weight: 700;
+          color: #12401f;
+          background: linear-gradient(90deg, var(--accent), var(--accent-2));
+          box-shadow: 0 8px 18px rgba(52, 139, 57, 0.28);
+        }
+
+        .note {
+          margin-top: 12px;
+          font-size: 13px;
+          color: #5d8368;
+        }
+      </style>
+    </head>
+    <body>
+      <main class="panel">
+        <span class="badge">${badgeText}</span>
+        <h1>${input.title}</h1>
+        <p>${input.message}</p>
+        <a class="cta" href="${input.ctaHref}">${input.ctaLabel}</a>
+        <p class="note">If this page opened from an old email, request a new activation link from the login screen.</p>
+      </main>
+    </body>
+  </html>
+  `
+}
+
 authRoutes.post('/signup', async (req, res) => {
   const { fullName, email, password } = req.body as {
     fullName?: string
@@ -152,7 +266,15 @@ authRoutes.post('/login', async (req, res) => {
 authRoutes.get('/activate', async (req, res) => {
   const token = typeof req.query.token === 'string' ? req.query.token : ''
   if (!token) {
-    return res.status(400).send('<h3>Invalid activation link.</h3>')
+    return res.status(400).send(
+      renderActivationPage({
+        title: 'Invalid Activation Link',
+        message: 'The activation link is missing required details. Please request a new link from the login page.',
+        ctaLabel: 'Go to Login',
+        ctaHref: env.clientOrigin,
+        tone: 'error',
+      }),
+    )
   }
 
   const tokenHash = hashActivationToken(token)
@@ -163,7 +285,15 @@ authRoutes.get('/activate', async (req, res) => {
   })
 
   if (!user) {
-    return res.status(400).send('<h3>Activation link is invalid or expired.</h3>')
+    return res.status(400).send(
+      renderActivationPage({
+        title: 'Activation Link Expired',
+        message: 'This link is invalid or has expired. Use the login page to resend a fresh activation email.',
+        ctaLabel: 'Back to Login',
+        ctaHref: env.clientOrigin,
+        tone: 'error',
+      }),
+    )
   }
 
   user.isEmailVerified = true
@@ -171,13 +301,15 @@ authRoutes.get('/activate', async (req, res) => {
   user.activationTokenExpiresAt = null
   await user.save()
 
-  return res.send(`
-    <div style="font-family: Arial, sans-serif; padding: 24px; color: #1f2937;">
-      <h2>Account activated successfully!</h2>
-      <p>You can now return to the app and log in.</p>
-      <a href="${env.clientOrigin}" style="display:inline-block;margin-top:12px;padding:10px 14px;background:#15803d;color:#fff;text-decoration:none;border-radius:8px;">Go to Login</a>
-    </div>
-  `)
+  return res.send(
+    renderActivationPage({
+      title: 'Account Activated Successfully',
+      message: 'Your account is now active. Return to the app and log in to continue.',
+      ctaLabel: 'Go to Login',
+      ctaHref: env.clientOrigin,
+      tone: 'success',
+    }),
+  )
 })
 
 authRoutes.get('/me', requireAuth, async (req, res) => {
