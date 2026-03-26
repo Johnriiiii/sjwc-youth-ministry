@@ -69,29 +69,24 @@ body {
   align-items: center;
 }
 
-.cross-wrap {
-  position: relative;
-  width: 88px;
-  height: 88px;
+.logo-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
-.cross-bg {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.22);
-  backdrop-filter: blur(10px);
-  border: 2px solid rgba(255, 255, 255, 0.45);
+.logo {
+  width: 100px;
+  height: auto;
+  max-width: 100%;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
 }
 
-.cross-icon {
-  position: relative;
-  z-index: 2;
-  font-size: 2.4rem;
+.header-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .chapel-name {
