@@ -6,7 +6,7 @@ export function Header({ subtitle = 'Youth Ministry' }: HeaderProps) {
   return (
     <header className="header">
       <div className="logo-container">
-        <img src="/SWJC-YOUTH.jpg" alt="St. Joseph the Worker Chapel Youth Council" className="logo" />
+        <img src="/SWJC-YOUTH.png" alt="St. Joseph the Worker Chapel Youth Council" className="logo" />
       </div>
       <div className="header-text">
         <div className="chapel-name">St. Joseph the Worker Chapel</div>
