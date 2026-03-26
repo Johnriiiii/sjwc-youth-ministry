@@ -5,6 +5,7 @@ import { authRoutes } from './routes/authRoutes.js';
 import { submissionRoutes } from './routes/submissionRoutes.js';
 import { adminRoutes } from './routes/adminRoutes.js';
 import { activityRoutes } from './routes/activityRoutes.js';
+import { messageRoutes } from './routes/messageRoutes.js';
 export const app = express();
 app.use(cors({
     origin: (origin, callback) => {
@@ -27,6 +28,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/activities', activityRoutes);
+app.use('/api', messageRoutes);
 app.use((err, _req, res, _next) => {
     console.error(err);
     res.status(500).json({ message: 'Internal server error' });

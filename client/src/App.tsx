@@ -14,16 +14,22 @@ import {
   deleteAdminActivity,
   deleteAdminUser,
   deleteAdminSubmission,
+  deleteMessage,
+  getMessageRecipients,
   listActivities,
   listAdminAuditLogs,
   listAdminActivities,
+  listMyMessages,
+  listSentMessages,
   listMySubmissions,
   listAdminSubmissions,
   listAdminUsers,
   login,
+  markMessageAsRead,
   me,
   readToken,
   saveToken,
+  sendMessage,
   signup,
   updateAdminActivity,
   updateAdminActivityStatus,
@@ -37,6 +43,8 @@ import type {
   AdminAccount,
   AdminAuditLog,
   AuthUser,
+  Message,
+  MessageRecipient,
   Submission,
   SubmissionStatus,
   YouthFormInput,
@@ -48,6 +56,8 @@ function App() {
   const [activities, setActivities] = useState<Activity[]>([])
   const [auditLogs, setAuditLogs] = useState<AdminAuditLog[]>([])
   const [accounts, setAccounts] = useState<AdminAccount[]>([])
+  const [messages, setMessages] = useState<Message[]>([])
+  const [messageRecipients, setMessageRecipients] = useState<MessageRecipient[]>([])
   const [myLatestSubmission, setMyLatestSubmission] = useState<Submission | null>(null)
   const [booting, setBooting] = useState(true)
   const [dataLoading, setDataLoading] = useState(false)
@@ -89,22 +99,25 @@ function App() {
     setDataLoading(true)
 
     if (authUser.role === 0) {
-      Promise.all([listMySubmissions(token), listActivities()])
-        .then(([myRows, activityRows]) => {
+      Promise.all([listMySubmissions(token), listActivities(), listMyMessages(token)])
+        .then(([myRows, activityRows, messageRows]) => {
           setMyLatestSubmission(myRows.submissions[0] ?? null)
           setActivities(activityRows.activities)
+          setMessages(messageRows.data)
         })
         .catch((error) => setToast(error.message || 'Failed to load your profile details'))
         .finally(() => setDataLoading(false))
       return
     }
 
-    Promise.all([listAdminSubmissions(token), listAdminActivities(token), listAdminAuditLogs(token), listAdminUsers(token)])
-      .then(([submissionRows, activityRows, logRows, userRows]) => {
+    Promise.all([listAdminSubmissions(token), listAdminActivities(token), listAdminAuditLogs(token), listAdminUsers(token), listSentMessages(token), getMessageRecipients(token)])
+      .then(([submissionRows, activityRows, logRows, userRows, messageRows, recipientRows]) => {
         setSubmissions(submissionRows.submissions)
         setActivities(activityRows.activities)
         setAuditLogs(logRows.logs)
         setAccounts(userRows.users)
+        setMessages(messageRows.data)
+        setMessageRecipients(recipientRows.data)
       })
       .catch((error) => setToast(error.message || 'Failed to load submissions'))
       .finally(() => setDataLoading(false))
@@ -325,6 +338,46 @@ function App() {
     setAuditLogs(logs.logs)
   }
 
+  const onSendMessage = async (input: {
+    title: string
+    content: string
+    messageType: 'Announcement' | 'Event Reminder' | 'Personal' | 'Emergency'
+    recipientIds: string[]
+  }) => {
+    const token = readToken()
+    if (!token) throw new Error('Please login first')
+
+    const { data } = await sendMessage(token, input)
+    setMessages((prev) => [data, ...prev])
+    setToast('Message sent successfully')
+  }
+
+  const onMarkMessageRead = async (messageId: string) => {
+    const token = readToken()
+    if (!token) throw new Error('Please login first')
+
+    await markMessageAsRead(token, messageId)
+    setMessages((prev) =>
+      prev.map((message) =>
+        message._id === messageId
+          ? {
+              ...message,
+              isRead: true,
+            }
+          : message,
+      ),
+    )
+  }
+
+  const onDeleteMessage = async (messageId: string) => {
+    const token = readToken()
+    if (!token) throw new Error('Please login first')
+
+    await deleteMessage(token, messageId)
+    setMessages((prev) => prev.filter((message) => message._id !== messageId))
+    setToast('Message deleted')
+  }
+
   const onLogout = () => {
     clearToken()
     setAuthUser(null)
@@ -332,6 +385,8 @@ function App() {
     setActivities([])
     setAuditLogs([])
     setAccounts([])
+    setMessages([])
+    setMessageRecipients([])
     setMyLatestSubmission(null)
     setToast('Logged out')
   }
@@ -438,12 +493,76 @@ function App() {
               onEditAccount={onEditAccount}
               onDeleteAccount={onDeleteAccount}
               auditLogs={auditLogs}
+              messages={messages}
+              messageRecipients={messageRecipients}
+              onSendMessage={onSendMessage}
+              onDeleteMessage={onDeleteMessage}
               onLogout={onLogout}
             />
           ) : (
             <>
               <ProfileCard user={authUser} />
               <ActivityFeed activities={activities} loading={dataLoading} />
+              <section className="card">
+                <div className="card-accent"></div>
+                <div className="form-title">Messages</div>
+                <div className="form-desc">Updates and announcements from youth ministry administrators.</div>
+
+                {messages.length === 0 ? (
+                  <p className="activity-empty">No messages yet.</p>
+                ) : (
+                  <div className="settings-items">
+                    {messages.map((message) => (
+                      <article
+                        key={message._id}
+                        className="settings-item"
+                        style={{
+                          opacity: message.isRead ? 0.8 : 1,
+                          borderLeft: `4px solid ${
+                            message.messageType === 'Emergency'
+                              ? '#e74c3c'
+                              : message.messageType === 'Announcement'
+                                ? '#3498db'
+                                : message.messageType === 'Event Reminder'
+                                  ? '#f39c12'
+                                  : '#2ecc71'
+                          }`,
+                        }}
+                      >
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 800, marginBottom: 6 }}>{message.title}</div>
+                          <div style={{ marginBottom: 6, color: '#4d4d4d', lineHeight: 1.5 }}>{message.content}</div>
+                          <div style={{ fontSize: '0.85rem', color: '#7a7a7a' }}>
+                            {message.messageType} • {new Date(message.createdAt).toLocaleString('en-PH')}
+                          </div>
+                        </div>
+                        <div className="activity-action-row">
+                          {!message.isRead ? (
+                            <button
+                              type="button"
+                              className="action-btn action-btn-edit"
+                              onClick={() => {
+                                void onMarkMessageRead(message._id)
+                              }}
+                            >
+                              Mark Read
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            className="action-btn action-btn-delete"
+                            onClick={() => {
+                              void onDeleteMessage(message._id)
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
               {myLatestSubmission ? (
                 <section className="card submitted-profile-card">
                   <div className="card-accent"></div>

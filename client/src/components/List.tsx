@@ -23,6 +23,8 @@ import type {
   AdminAuditLog,
   Submission,
   SubmissionStatus,
+  Message,
+  MessageRecipient,
 } from '../types'
 
 type ListProps = {
@@ -82,6 +84,15 @@ type ListProps = {
   ) => Promise<void>
   onDeleteAccount: (id: string) => Promise<void>
   auditLogs: AdminAuditLog[]
+  messages: Message[]
+  messageRecipients: MessageRecipient[]
+  onSendMessage: (input: {
+    title: string
+    content: string
+    messageType: 'Announcement' | 'Event Reminder' | 'Personal' | 'Emergency'
+    recipientIds: string[]
+  }) => Promise<void>
+  onDeleteMessage: (messageId: string) => Promise<void>
   onLogout: () => void
 }
 
@@ -173,9 +184,13 @@ export function List({
   onEditAccount,
   onDeleteAccount,
   auditLogs,
+  messages,
+  messageRecipients,
+  onSendMessage,
+  onDeleteMessage,
   onLogout,
 }: ListProps) {
-  const [activeTab, setActiveTab] = useState<'registrations' | 'analytics' | 'activities' | 'settings'>('registrations')
+  const [activeTab, setActiveTab] = useState<'registrations' | 'analytics' | 'activities' | 'settings' | 'messages'>('registrations')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<'' | SubmissionStatus>('')
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name'>('newest')
@@ -207,6 +222,14 @@ export function List({
   })
   const [editingAccountId, setEditingAccountId] = useState<string | null>(null)
   const [editingAccountDraft, setEditingAccountDraft] = useState<EditAccountDraft | null>(null)
+  const [messageDraft, setMessageDraft] = useState({
+    title: '',
+    content: '',
+    messageType: 'Announcement' as 'Announcement' | 'Event Reminder' | 'Personal' | 'Emergency',
+    recipientIds: [] as string[],
+  })
+  const [messageComposingActive, setMessageComposingActive] = useState(false)
+  const [messageWorking, setMessageWorking] = useState(false)
 
   const stats = useMemo(() => {
     return {
@@ -597,6 +620,36 @@ export function List({
     }
   }
 
+  const submitMessage = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!messageDraft.title.trim() || !messageDraft.content.trim() || messageDraft.recipientIds.length === 0) {
+      window.alert('Please fill in all fields and select at least one recipient')
+      return
+    }
+
+    setMessageWorking(true)
+    try {
+      await onSendMessage({
+        title: messageDraft.title.trim(),
+        content: messageDraft.content.trim(),
+        messageType: messageDraft.messageType,
+        recipientIds: messageDraft.recipientIds,
+      })
+      setMessageDraft({
+        title: '',
+        content: '',
+        messageType: 'Announcement',
+        recipientIds: [],
+      })
+      setMessageComposingActive(false)
+      window.alert('Message sent successfully!')
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Failed to send message')
+    } finally {
+      setMessageWorking(false)
+    }
+  }
+
   const submitAccount = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!accountDraft.fullName.trim() || !accountDraft.email.trim() || !accountDraft.password.trim()) {
@@ -726,6 +779,13 @@ export function List({
             onClick={() => setActiveTab('activities')}
           >
             <span className="ico">📅</span><span>Activities</span>
+          </button>
+          <button
+            type="button"
+            className={`sb-item ${activeTab === 'messages' ? 'active' : ''}`}
+            onClick={() => setActiveTab('messages')}
+          >
+            <span className="ico">💬</span><span>Messages</span>
           </button>
           <button
             type="button"
@@ -1238,6 +1298,179 @@ export function List({
                         </article>
                       )
                     })}
+                  </div>
+                )}
+              </section>
+            </div>
+          </>
+        ) : activeTab === 'messages' ? (
+          <>
+            <div className="topbar">
+              <div>
+                <div className="page-title">Communication <span>Messages</span></div>
+                <div className="page-sub">Send announcements and messages to youth and members</div>
+              </div>
+              {!messageComposingActive && (
+                <button className="btn btn-excel" onClick={() => setMessageComposingActive(true)}>
+                  ✉️ Compose Message
+                </button>
+              )}
+            </div>
+
+            <div className="settings-grid">
+              {messageComposingActive && (
+                <form className="settings-form" onSubmit={(event) => void submitMessage(event)}>
+                  <h3>Compose Message</h3>
+                  <label>
+                    Title
+                    <input
+                      type="text"
+                      value={messageDraft.title}
+                      onChange={(event) =>
+                        setMessageDraft((prev) => ({ ...prev, title: event.target.value }))
+                      }
+                      placeholder="Message title or subject"
+                    />
+                  </label>
+                  <label>
+                    Message Type
+                    <select
+                      value={messageDraft.messageType}
+                      onChange={(event) =>
+                        setMessageDraft((prev) => ({
+                          ...prev,
+                          messageType: event.target.value as 'Announcement' | 'Event Reminder' | 'Personal' | 'Emergency',
+                        }))
+                      }
+                    >
+                      <option value="Announcement">Announcement</option>
+                      <option value="Event Reminder">Event Reminder</option>
+                      <option value="Personal">Personal</option>
+                      <option value="Emergency">Emergency</option>
+                    </select>
+                  </label>
+                  <label>
+                    Content
+                    <textarea
+                      value={messageDraft.content}
+                      onChange={(event) =>
+                        setMessageDraft((prev) => ({ ...prev, content: event.target.value }))
+                      }
+                      placeholder="Type your message here..."
+                      rows={6}
+                    />
+                  </label>
+                  <label>
+                    Recipients (select at least one)
+                    <div className="recipient-checkboxes">
+                      {messageRecipients.length === 0 ? (
+                        <p style={{ color: '#666', fontSize: '0.9rem' }}>No recipients available</p>
+                      ) : (
+                        messageRecipients.map((recipient) => (
+                          <label key={recipient._id} className="checkbox-label">
+                            <input
+                              type="checkbox"
+                              checked={messageDraft.recipientIds.includes(recipient._id)}
+                              onChange={(event) => {
+                                if (event.target.checked) {
+                                  setMessageDraft((prev) => ({
+                                    ...prev,
+                                    recipientIds: [...prev.recipientIds, recipient._id],
+                                  }))
+                                } else {
+                                  setMessageDraft((prev) => ({
+                                    ...prev,
+                                    recipientIds: prev.recipientIds.filter((id) => id !== recipient._id),
+                                  }))
+                                }
+                              }}
+                            />
+                            <span>
+                              {recipient.fullName} <span style={{ color: '#999', fontSize: '0.85rem' }}>({recipient.email})</span>
+                            </span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button type="submit" className="btn btn-excel" disabled={messageWorking}>
+                      Send Message
+                    </button>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => {
+                        setMessageComposingActive(false)
+                        setMessageDraft({
+                          title: '',
+                          content: '',
+                          messageType: 'Announcement',
+                          recipientIds: [],
+                        })
+                      }}
+                      style={{ background: '#ddd', color: '#333' }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              <section className="settings-list">
+                <h3>Sent Messages ({messages.length})</h3>
+                {messages.length === 0 ? (
+                  <p className="activity-empty">No messages sent yet.</p>
+                ) : (
+                  <div className="settings-items">
+                    {messages.map((msg) => (
+                      <article
+                        key={msg._id}
+                        className="settings-item"
+                        style={{
+                          borderLeft: `4px solid ${
+                            msg.messageType === 'Emergency'
+                              ? '#e74c3c'
+                              : msg.messageType === 'Announcement'
+                                ? '#3498db'
+                                : msg.messageType === 'Event Reminder'
+                                  ? '#f39c12'
+                                  : '#2ecc71'
+                          }`,
+                        }}
+                      >
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{msg.title}</div>
+                          <div style={{ fontSize: '0.9rem', color: '#666', marginBottom: '8px' }}>
+                            Type: <strong>{msg.messageType}</strong> • Recipients: <strong>{msg.recipientIds.length}</strong> • Read by:{' '}
+                            <strong>{msg.readBy.length}</strong>
+                          </div>
+                          <div
+                            style={{
+                              fontSize: '0.85rem',
+                              color: '#999',
+                              display: 'flex',
+                              gap: '16px',
+                            }}
+                          >
+                            <span>Sent: {dateText(msg.createdAt)}</span>
+                          </div>
+                        </div>
+                        <div className="activity-action-row">
+                          <button
+                            type="button"
+                            className="action-btn action-btn-delete"
+                            disabled={working}
+                            onClick={() => {
+                              setWorking(true)
+                              void onDeleteMessage(msg._id).finally(() => setWorking(false))
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </article>
+                    ))}
                   </div>
                 )}
               </section>

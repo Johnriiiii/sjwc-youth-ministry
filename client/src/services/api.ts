@@ -8,6 +8,8 @@ import type {
   Submission,
   SubmissionStatus,
   YouthFormInput,
+  Message,
+  MessageRecipient,
 } from '../types'
 
 const API_BASE =
@@ -199,3 +201,40 @@ export const deleteAdminUser = (token: string, id: string) =>
     method: 'DELETE',
     token,
   })
+
+// Message API Methods
+export const sendMessage = (
+  token: string,
+  input: {
+    title: string
+    content: string
+    messageType: 'Announcement' | 'Event Reminder' | 'Personal' | 'Emergency'
+    recipientIds: string[]
+  },
+) =>
+  request<{ data: Message }>('/messages', {
+    method: 'POST',
+    token,
+    body: input,
+  })
+
+export const listMyMessages = (token: string) =>
+  request<{ data: Message[] }>('/messages', { token })
+
+export const listSentMessages = (token: string) =>
+  request<{ data: Message[] }>('/messages/admin/sent', { token })
+
+export const markMessageAsRead = (token: string, messageId: string) =>
+  request<{ message: string }>(`/messages/${messageId}/read`, {
+    method: 'PATCH',
+    token,
+  })
+
+export const deleteMessage = (token: string, messageId: string) =>
+  request<{ message: string }>(`/messages/${messageId}`, {
+    method: 'DELETE',
+    token,
+  })
+
+export const getMessageRecipients = (token: string) =>
+  request<{ data: MessageRecipient[] }>('/messages/recipients/all', { token })

@@ -79,3 +79,28 @@ export type AdminAuditLog = {
   createdAt: string
   updatedAt: string
 }
+
+export type MessageType = 'Announcement' | 'Event Reminder' | 'Personal' | 'Emergency'
+
+export type Message = {
+  _id: string
+  senderId: string
+  senderName: string
+  title: string
+  content: string
+  messageType: MessageType
+  readBy: string[]
+  recipientIds: string[]
+  isPinned: boolean
+  status: 'Draft' | 'Sent' | 'Archived'
+  createdAt: string
+  updatedAt: string
+  isRead?: boolean
+}
+
+export type MessageRecipient = {
+  _id: string
+  fullName: string
+  email: string
+  role: Role
+}
