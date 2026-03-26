@@ -1170,23 +1170,8 @@ button.overview-item {
   color: #5b8367;
 }
 
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 40, 10, 0.55);
-  backdrop-filter: blur(6px);
-  z-index: 500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s;
-}
-
-.modal-overlay.open { opacity: 1; pointer-events: all; }
-.modal-overlay.closing { opacity: 0; }
+/* Old modal implementation - replaced with modal-visible approach */
+/* Keeping modal and related classes for backward compatibility if needed */
 
 .modal {
   background: white;
@@ -2350,6 +2335,7 @@ button:focus-visible,
 .modal-overlay.modal-visible {
   display: flex;
   opacity: 1;
+  pointer-events: all;
 }
 
 .modal-popout {
