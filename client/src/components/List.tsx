@@ -24,7 +24,6 @@ import type {
   Submission,
   SubmissionStatus,
   Message,
-  MessageRecipient,
 } from '../types'
 
 type ListProps = {
@@ -85,7 +84,6 @@ type ListProps = {
   onDeleteAccount: (id: string) => Promise<void>
   auditLogs: AdminAuditLog[]
   messages: Message[]
-  messageRecipients: MessageRecipient[]
   onSendMessage: (input: {
     title: string
     content: string
@@ -185,7 +183,6 @@ export function List({
   onDeleteAccount,
   auditLogs,
   messages,
-  messageRecipients,
   onSendMessage,
   onDeleteMessage,
   onLogout,
@@ -230,6 +227,11 @@ export function List({
   })
   const [messageComposingActive, setMessageComposingActive] = useState(false)
   const [messageWorking, setMessageWorking] = useState(false)
+
+  const messageRecipients = useMemo(
+    () => accounts.filter((account) => account.id !== currentAdminId),
+    [accounts, currentAdminId],
+  )
 
   const stats = useMemo(() => {
     return {
@@ -1367,20 +1369,20 @@ export function List({
                         <p style={{ color: '#666', fontSize: '0.9rem' }}>No recipients available</p>
                       ) : (
                         messageRecipients.map((recipient) => (
-                          <label key={recipient._id} className="checkbox-label">
+                          <label key={recipient.id} className="checkbox-label">
                             <input
                               type="checkbox"
-                              checked={messageDraft.recipientIds.includes(recipient._id)}
+                              checked={messageDraft.recipientIds.includes(recipient.id)}
                               onChange={(event) => {
                                 if (event.target.checked) {
                                   setMessageDraft((prev) => ({
                                     ...prev,
-                                    recipientIds: [...prev.recipientIds, recipient._id],
+                                    recipientIds: [...prev.recipientIds, recipient.id],
                                   }))
                                 } else {
                                   setMessageDraft((prev) => ({
                                     ...prev,
-                                    recipientIds: prev.recipientIds.filter((id) => id !== recipient._id),
+                                    recipientIds: prev.recipientIds.filter((id) => id !== recipient.id),
                                   }))
                                 }
                               }}

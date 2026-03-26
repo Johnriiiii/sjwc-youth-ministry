@@ -15,7 +15,6 @@ import {
   deleteAdminUser,
   deleteAdminSubmission,
   deleteMessage,
-  getMessageRecipients,
   listActivities,
   listAdminAuditLogs,
   listAdminActivities,
@@ -44,7 +43,6 @@ import type {
   AdminAuditLog,
   AuthUser,
   Message,
-  MessageRecipient,
   Submission,
   SubmissionStatus,
   YouthFormInput,
@@ -57,7 +55,6 @@ function App() {
   const [auditLogs, setAuditLogs] = useState<AdminAuditLog[]>([])
   const [accounts, setAccounts] = useState<AdminAccount[]>([])
   const [messages, setMessages] = useState<Message[]>([])
-  const [messageRecipients, setMessageRecipients] = useState<MessageRecipient[]>([])
   const [myLatestSubmission, setMyLatestSubmission] = useState<Submission | null>(null)
   const [booting, setBooting] = useState(true)
   const [dataLoading, setDataLoading] = useState(false)
@@ -110,14 +107,13 @@ function App() {
       return
     }
 
-    Promise.all([listAdminSubmissions(token), listAdminActivities(token), listAdminAuditLogs(token), listAdminUsers(token), listSentMessages(token), getMessageRecipients(token)])
-      .then(([submissionRows, activityRows, logRows, userRows, messageRows, recipientRows]) => {
+    Promise.all([listAdminSubmissions(token), listAdminActivities(token), listAdminAuditLogs(token), listAdminUsers(token), listSentMessages(token)])
+      .then(([submissionRows, activityRows, logRows, userRows, messageRows]) => {
         setSubmissions(submissionRows.submissions)
         setActivities(activityRows.activities)
         setAuditLogs(logRows.logs)
         setAccounts(userRows.users)
         setMessages(messageRows.data)
-        setMessageRecipients(recipientRows.data)
       })
       .catch((error) => setToast(error.message || 'Failed to load submissions'))
       .finally(() => setDataLoading(false))
@@ -386,7 +382,6 @@ function App() {
     setAuditLogs([])
     setAccounts([])
     setMessages([])
-    setMessageRecipients([])
     setMyLatestSubmission(null)
     setToast('Logged out')
   }
@@ -494,7 +489,6 @@ function App() {
               onDeleteAccount={onDeleteAccount}
               auditLogs={auditLogs}
               messages={messages}
-              messageRecipients={messageRecipients}
               onSendMessage={onSendMessage}
               onDeleteMessage={onDeleteMessage}
               onLogout={onLogout}
