@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import { env } from '../config/env.js';
 const smtpConfigured = Boolean(env.smtpHost && env.smtpUser && env.smtpPass);
+export const isSmtpConfigured = smtpConfigured;
 const transporter = smtpConfigured
     ? nodemailer.createTransport({
         host: env.smtpHost,
@@ -14,9 +15,7 @@ const transporter = smtpConfigured
     : null;
 export const sendActivationEmail = async (input) => {
     if (!transporter) {
-        console.warn('SMTP is not configured. Activation email not sent.');
-        console.warn(`Activation URL for ${input.to}: ${input.activationUrl}`);
-        return;
+        throw new Error('SMTP is not configured on the server. Please set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, and SMTP_FROM.');
     }
     await transporter.sendMail({
         from: env.smtpFrom,

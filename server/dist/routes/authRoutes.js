@@ -31,11 +31,21 @@ authRoutes.post('/signup', async (req, res) => {
         activationTokenHash: tokenHash,
         activationTokenExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
-    await sendActivationEmail({
-        to: user.email,
-        fullName: user.fullName,
-        activationUrl,
-    });
+    try {
+        await sendActivationEmail({
+            to: user.email,
+            fullName: user.fullName,
+            activationUrl,
+        });
+    }
+    catch (error) {
+        await UserModel.findByIdAndDelete(user._id);
+        return res.status(500).json({
+            message: error instanceof Error
+                ? `Account not created because activation email failed: ${error.message}`
+                : 'Account not created because activation email failed.',
+        });
+    }
     return res.status(201).json({
         message: 'Account created. Please check your email for activation link before logging in.',
     });

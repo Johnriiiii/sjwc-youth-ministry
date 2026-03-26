@@ -297,11 +297,21 @@ adminRoutes.post('/users', async (req, res) => {
         }
         throw error;
     }
-    await sendActivationEmail({
-        to: created.email,
-        fullName: created.fullName,
-        activationUrl,
-    });
+    try {
+        await sendActivationEmail({
+            to: created.email,
+            fullName: created.fullName,
+            activationUrl,
+        });
+    }
+    catch (error) {
+        await UserModel.findByIdAndDelete(created._id);
+        return res.status(500).json({
+            message: error instanceof Error
+                ? `User was not created because activation email failed: ${error.message}`
+                : 'User was not created because activation email failed.',
+        });
+    }
     await writeAuditLog({
         adminId: req.auth?.sub,
         action: 'user.create',
