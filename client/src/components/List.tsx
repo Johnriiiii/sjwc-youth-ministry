@@ -1694,7 +1694,7 @@ export function List({
         )}
       </div>
 
-      <div className={`modal-overlay ${selected ? 'open' : ''} ${closingModal ? 'closing' : ''}`} onClick={closeModal}>
+      <div className={`modal-overlay ${selected ? 'modal-visible' : ''} ${closingModal ? 'closing' : ''}`} onClick={closeModal}>
         {selected && (
           <div className={`modal ${closingModal ? 'closing' : ''}`} onClick={(event) => event.stopPropagation()}>
             <div className="modal-header">
